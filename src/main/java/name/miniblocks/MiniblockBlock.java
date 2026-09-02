@@ -63,6 +63,19 @@ public class MiniblockBlock extends Block implements BlockEntityProvider {
     }
 
     @Override
+    protected void spawnBreakParticles(World world, PlayerEntity player, BlockPos pos, BlockState state) {
+        BlockEntity blockEntity = world.getBlockEntity(pos);
+        if (blockEntity instanceof MiniblockEntity miniblockEntity) {
+            for (int index = 0; index < miniblockEntity.subBlocks.length; index++) {
+                BlockState subState = miniblockEntity.getSubBlock(index);
+                if (subState != null) {
+                    world.addBlockBreakParticles(pos, subState);
+                }
+            }
+        }
+    }
+
+    @Override
     public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
         if (!world.isClient() && !player.isCreative()) {
             BlockEntity blockEntity = world.getBlockEntity(pos);

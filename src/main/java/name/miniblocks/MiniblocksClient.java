@@ -4,12 +4,14 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
+import net.fabricmc.fabric.api.client.screenhandler.v1.ScreenRegistry;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 
 public class MiniblocksClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        ScreenRegistry.register(Miniblocks.MINIBLOCK_BENCH_SCREEN_HANDLER, MiniblockBenchScreen::new);
         BlockEntityRendererRegistry.register(Miniblocks.MINIBLOCK_ENTITY, MiniblockEntityRenderer::new);
         BuiltinItemRendererRegistry.INSTANCE.register(Miniblocks.MINIBLOCK_ITEM, (stack, mode, matrices, vertexConsumers, light, overlay) -> {
             BlockState state = MiniblockItem.getWrappedBlockState(stack);

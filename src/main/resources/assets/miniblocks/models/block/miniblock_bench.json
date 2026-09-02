@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "miniblocks:block/miniblock_bench_side",
+    "down": "minecraft:block/cobblestone",
+    "up": "miniblocks:block/miniblock_bench_top",
+    "north": "miniblocks:block/miniblock_bench_front",
+    "south": "miniblocks:block/miniblock_bench_side",
+    "west": "miniblocks:block/miniblock_bench_side",
+    "east": "miniblocks:block/miniblock_bench_side"
+  }
+}

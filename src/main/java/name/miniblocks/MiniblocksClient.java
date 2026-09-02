@@ -19,7 +19,7 @@ public class MiniblocksClient implements ClientModInitializer {
             matrices.translate(0.5D, 0.5D, 0.5D);
             matrices.scale(0.75F, 0.75F, 0.75F);
             matrices.translate(-0.5D, -0.5D, -0.5D);
-            MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(state, matrices, vertexConsumers, light, overlay);
+            MiniblockRenderUtil.renderSubBlock(state, 0, 0, 0, matrices, vertexConsumers, light, overlay);
             matrices.pop();
         });
 

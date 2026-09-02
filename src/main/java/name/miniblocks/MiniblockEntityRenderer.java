@@ -1,11 +1,10 @@
 package name.miniblocks;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.block.BlockState;
 
 public class MiniblockEntityRenderer implements BlockEntityRenderer<MiniblockEntity> {
 
@@ -29,7 +28,7 @@ public class MiniblockEntityRenderer implements BlockEntityRenderer<MiniblockEnt
                     matrices.translate(x * 0.5D, y * 0.5D, z * 0.5D);
                     matrices.scale(0.5F, 0.5F, 0.5F);
 
-                    MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(subBlockState, matrices, vertexConsumers, light, overlay);
+                    MiniblockRenderUtil.renderSubBlock(subBlockState, x, y, z, matrices, vertexConsumers, light, overlay);
                     matrices.pop();
                 }
             }

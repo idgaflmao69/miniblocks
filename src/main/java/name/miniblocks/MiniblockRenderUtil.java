@@ -74,7 +74,7 @@ final class MiniblockRenderUtil {
 
         renderManager.getModelRenderer().render(
                 world,
-                new QuadrantModel(model, x, y, z),
+                new QuadrantModel(model, x, y, z, true),
                 state,
                 pos,
                 matrices,
@@ -91,12 +91,18 @@ final class MiniblockRenderUtil {
         private final int x;
         private final int y;
         private final int z;
+        private final boolean disableAmbientOcclusion;
 
         private QuadrantModel(BakedModel delegate, int x, int y, int z) {
+            this(delegate, x, y, z, false);
+        }
+
+        private QuadrantModel(BakedModel delegate, int x, int y, int z, boolean disableAmbientOcclusion) {
             this.delegate = delegate;
             this.x = x;
             this.y = y;
             this.z = z;
+            this.disableAmbientOcclusion = disableAmbientOcclusion;
         }
 
         @Override
@@ -224,7 +230,7 @@ final class MiniblockRenderUtil {
 
         @Override
         public boolean useAmbientOcclusion() {
-            return delegate.useAmbientOcclusion();
+            return !disableAmbientOcclusion && delegate.useAmbientOcclusion();
         }
 
         @Override

@@ -13,9 +13,12 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.World;
 
 public class MiniblockItem extends BlockItem {
@@ -69,6 +72,19 @@ public class MiniblockItem extends BlockItem {
         return placementState != null ? placementState : block.getDefaultState();
     }
 
+    private boolean intersectsPlayer(PlayerEntity player, BlockPos pos, int x, int y, int z) {
+        if (player == null) {
+            return false;
+        }
+
+        VoxelShape miniCube = Block.createCuboidShape(
+                x * 8, y * 8, z * 8,
+                (x + 1) * 8, (y + 1) * 8, (z + 1) * 8
+        ).offset(pos.getX(), pos.getY(), pos.getZ());
+        VoxelShape playerShape = VoxelShapes.cuboid(player.getBoundingBox());
+        return VoxelShapes.matchesAnywhere(miniCube, playerShape, BooleanBiFunction.AND);
+    }
+
     @Override
     public ActionResult useOnBlock(ItemUsageContext context) {
         World world = context.getWorld();
@@ -109,6 +125,10 @@ public class MiniblockItem extends BlockItem {
                         return ActionResult.PASS;
                     }
 
+                    if (intersectsPlayer(player, pos, x, y, z)) {
+                        return ActionResult.PASS;
+                    }
+
                     if (world.isClient()) return ActionResult.SUCCESS;
 
                     miniblockEntity.setSubBlock(index, subBlockState);
@@ -126,6 +146,27 @@ public class MiniblockItem extends BlockItem {
         BlockState targetState = world.getBlockState(targetPos);
 
         if (targetState.isAir() || targetState.isReplaceable() || targetState.isOf(Miniblocks.MINIBLOCK)) {
+            Vec3d hitPos = context.getHitPos();
+
+            double relX = hitPos.x - pos.getX();
+            double relY = hitPos.y - pos.getY();
+            double relZ = hitPos.z - pos.getZ();
+
+            int x = Math.max(0, Math.min(1, (int) Math.floor(relX * 2)));
+            int y = Math.max(0, Math.min(1, (int) Math.floor(relY * 2)));
+            int z = Math.max(0, Math.min(1, (int) Math.floor(relZ * 2)));
+
+            if (side == Direction.UP) y = 0;
+            else if (side == Direction.DOWN) y = 1;
+            else if (side == Direction.NORTH) z = 1;
+            else if (side == Direction.SOUTH) z = 0;
+            else if (side == Direction.WEST) x = 1;
+            else if (side == Direction.EAST) x = 0;
+
+            if (intersectsPlayer(player, targetPos, x, y, z)) {
+                return ActionResult.PASS;
+            }
+
             if (world.isClient()) return ActionResult.SUCCESS;
 
             if (!targetState.isOf(Miniblocks.MINIBLOCK)) {
@@ -138,23 +179,6 @@ public class MiniblockItem extends BlockItem {
 
             BlockEntity blockEntity = world.getBlockEntity(targetPos);
             if (blockEntity instanceof MiniblockEntity miniblockEntity) {
-                Vec3d hitPos = context.getHitPos();
-
-                double relX = hitPos.x - pos.getX();
-                double relY = hitPos.y - pos.getY();
-                double relZ = hitPos.z - pos.getZ();
-
-                int x = Math.max(0, Math.min(1, (int) Math.floor(relX * 2)));
-                int y = Math.max(0, Math.min(1, (int) Math.floor(relY * 2)));
-                int z = Math.max(0, Math.min(1, (int) Math.floor(relZ * 2)));
-
-                if (side == Direction.UP) y = 0;
-                else if (side == Direction.DOWN) y = 1;
-                else if (side == Direction.NORTH) z = 1;
-                else if (side == Direction.SOUTH) z = 0;
-                else if (side == Direction.WEST) x = 1;
-                else if (side == Direction.EAST) x = 0;
-
                 int index = miniblockEntity.getIndex(x, y, z);
 
                 if (miniblockEntity.isSlotEmpty(index)) {

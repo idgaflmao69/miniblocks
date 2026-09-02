@@ -45,11 +45,11 @@ public class MiniblockBlock extends Block implements BlockEntityProvider {
                 }
             }
             if (shape == VoxelShapes.empty()) {
-                return VoxelShapes.fullCube();
+                return VoxelShapes.empty();
             }
             return shape;
         }
-        return VoxelShapes.fullCube();
+        return VoxelShapes.empty();
     }
 
     @Override
@@ -67,16 +67,14 @@ public class MiniblockBlock extends Block implements BlockEntityProvider {
         if (!world.isClient() && !player.isCreative()) {
             BlockEntity blockEntity = world.getBlockEntity(pos);
             if (blockEntity instanceof MiniblockEntity miniblockEntity) {
-                int count = 0;
                 for (int i = 0; i < miniblockEntity.subBlocks.length; i++) {
                     if (!miniblockEntity.isSlotEmpty(i)) {
-                        count++;
+                        BlockState subState = miniblockEntity.getSubBlock(i);
+                        if (subState != null) {
+                            ItemStack dropStack = MiniblockItem.createStack(subState, 1);
+                            Block.dropStack(world, pos, dropStack);
+                        }
                     }
-                }
-
-                if (count > 0) {
-                    ItemStack dropStack = new ItemStack(this.asItem(), count);
-                    Block.dropStack(world, pos, dropStack);
                 }
             }
         }

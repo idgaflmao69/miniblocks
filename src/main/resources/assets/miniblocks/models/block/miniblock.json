@@ -1,0 +1,7 @@
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "miniblocks:block/uranium_ore",
+    "particle": "miniblocks:block/uranium_ore"
+  }
+}

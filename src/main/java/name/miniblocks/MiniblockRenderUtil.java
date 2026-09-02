@@ -39,17 +39,37 @@ final class MiniblockRenderUtil {
         RenderLayer layer = RenderLayers.getEntityBlockLayer(state, false);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(layer);
 
-        renderManager.getModelRenderer().render(
-                matrices.peek(),
-                vertexConsumer,
-                state,
-                new QuadrantModel(model, x, y, z),
-                red,
-                green,
-                blue,
-                light,
-                overlay
-        );
+        BakedModel quadrantModel = new QuadrantModel(model, x, y, z);
+        Random random = Random.create();
+        for (Direction side : Direction.values()) {
+            random.setSeed(42L);
+            renderQuads(quadrantModel.getQuads(state, side, random), side, matrices, vertexConsumer,
+                    red, green, blue, light, overlay);
+        }
+        random.setSeed(42L);
+        renderQuads(quadrantModel.getQuads(state, null, random), null, matrices, vertexConsumer,
+                red, green, blue, light, overlay);
+    }
+
+    private static void renderQuads(List<BakedQuad> quads, Direction side, MatrixStack matrices,
+                                    VertexConsumer vertexConsumer, float red, float green, float blue,
+                                    int light, int overlay) {
+        float shade = getFaceShade(side);
+        for (BakedQuad quad : quads) {
+            vertexConsumer.quad(matrices.peek(), quad, red * shade, green * shade, blue * shade, light, overlay);
+        }
+    }
+
+    private static float getFaceShade(Direction face) {
+        if (face == null) {
+            return 1.0F;
+        }
+        return switch (face) {
+            case DOWN -> 0.5F;
+            case UP -> 1.0F;
+            case NORTH, SOUTH -> 0.8F;
+            case WEST, EAST -> 0.6F;
+        };
     }
 
     private static final class QuadrantModel implements BakedModel {

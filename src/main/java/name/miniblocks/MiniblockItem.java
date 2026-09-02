@@ -10,6 +10,8 @@ import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
@@ -23,6 +25,7 @@ import net.minecraft.world.World;
 
 public class MiniblockItem extends BlockItem {
     public static final String NBT_KEY = "wrapped_block_id";
+    private static final String STATE_NBT_KEY = "wrapped_block_state";
 
     public MiniblockItem(Block block, Settings settings) {
         super(block, settings);
@@ -31,7 +34,10 @@ public class MiniblockItem extends BlockItem {
     public static ItemStack createStack(BlockState blockState, int count) {
         ItemStack stack = new ItemStack(Miniblocks.MINIBLOCK_ITEM, count);
         Block block = blockState.getBlock();
-        stack.getOrCreateNbt().putString(NBT_KEY, Registries.BLOCK.getId(block).toString());
+        NbtCompound nbt = stack.getOrCreateNbt();
+        nbt.putString(NBT_KEY, Registries.BLOCK.getId(block).toString());
+        BlockState.CODEC.encodeStart(NbtOps.INSTANCE, blockState).result()
+                .ifPresent(encodedState -> nbt.put(STATE_NBT_KEY, encodedState));
         return stack;
     }
 
@@ -52,6 +58,14 @@ public class MiniblockItem extends BlockItem {
         Identifier id = Identifier.tryParse(idString);
         if (id == null) {
             return Blocks.STONE.getDefaultState();
+        }
+
+        NbtElement encodedState = stack.getNbt().get(STATE_NBT_KEY);
+        if (encodedState != null) {
+            BlockState decodedState = BlockState.CODEC.parse(NbtOps.INSTANCE, encodedState).result().orElse(null);
+            if (decodedState != null) {
+                return decodedState;
+            }
         }
 
         Block block = Registries.BLOCK.get(id);

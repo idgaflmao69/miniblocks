@@ -12,13 +12,20 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.screen.ScreenHandlerType;
+import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.util.Identifier;
 
 public class Miniblocks implements ModInitializer {
 	public static final String MOD_ID = "miniblocks";
 
 	public static final Block MINIBLOCK = new MiniblockBlock(FabricBlockSettings.create().mapColor(MapColor.STONE_GRAY).nonOpaque());
-	public static final Block MINIBLOCK_BENCH = new MiniblockBenchBlock(FabricBlockSettings.create().mapColor(MapColor.STONE_GRAY).strength(2.0F));
+	public static final Block MINIBLOCK_BENCH = new MiniblockBenchBlock(
+			FabricBlockSettings.create()
+					.mapColor(MapColor.STONE_GRAY)
+					.strength(2.0F, 6.0F)
+					.requiresTool()
+					.sounds(BlockSoundGroup.STONE)
+	);
 	public static final Block URANIUM_ORE = new Block(FabricBlockSettings.create().strength(3.0F));
 	public static final MiniblockItem MINIBLOCK_ITEM = new MiniblockItem(MINIBLOCK, new FabricItemSettings());
 	public static final BlockItem MINIBLOCK_BENCH_ITEM = new BlockItem(MINIBLOCK_BENCH, new FabricItemSettings());

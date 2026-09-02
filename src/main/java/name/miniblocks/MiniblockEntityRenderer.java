@@ -28,10 +28,7 @@ public class MiniblockEntityRenderer implements BlockEntityRenderer<MiniblockEnt
                     matrices.translate(x * 0.5D, y * 0.5D, z * 0.5D);
                     matrices.scale(0.5F, 0.5F, 0.5F);
 
-                    MiniblockRenderUtil.renderSubBlock(
-                            subBlockState, x, y, z, entity.getWorld(), entity.getPos(),
-                            matrices, vertexConsumers, overlay
-                    );
+                    MiniblockRenderUtil.renderSubBlock(subBlockState, x, y, z, matrices, vertexConsumers, light, overlay);
                     matrices.pop();
                 }
             }

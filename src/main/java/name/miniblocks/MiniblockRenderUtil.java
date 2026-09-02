@@ -13,7 +13,9 @@ import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.BlockRenderView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +50,38 @@ final class MiniblockRenderUtil {
                 green,
                 blue,
                 light,
+                overlay
+        );
+    }
+
+    static void renderSubBlock(BlockState state, int x, int y, int z, BlockRenderView world, BlockPos pos,
+                               MatrixStack matrices, VertexConsumerProvider vertexConsumers, int overlay) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        BlockRenderManager renderManager = client.getBlockRenderManager();
+
+        if (state.getRenderType() != BlockRenderType.MODEL) {
+            renderManager.renderBlockAsEntity(state, matrices, vertexConsumers, 0, overlay);
+            return;
+        }
+
+        BakedModel model = renderManager.getModel(state);
+        int color = client.getBlockColors().getColor(state, world, pos, 0);
+        float red = (color >> 16 & 255) / 255.0F;
+        float green = (color >> 8 & 255) / 255.0F;
+        float blue = (color & 255) / 255.0F;
+        RenderLayer layer = RenderLayers.getEntityBlockLayer(state, false);
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(layer);
+
+        renderManager.getModelRenderer().render(
+                world,
+                new QuadrantModel(model, x, y, z),
+                state,
+                pos,
+                matrices,
+                vertexConsumer,
+                false,
+                Random.create(),
+                42L,
                 overlay
         );
     }

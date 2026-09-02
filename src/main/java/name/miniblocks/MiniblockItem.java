@@ -2,21 +2,71 @@ package name.miniblocks;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public class MiniblockItem extends BlockItem {
+    public static final String NBT_KEY = "wrapped_block_id";
 
     public MiniblockItem(Block block, Settings settings) {
         super(block, settings);
+    }
+
+    public static ItemStack createStack(BlockState blockState, int count) {
+        ItemStack stack = new ItemStack(Miniblocks.MINIBLOCK_ITEM, count);
+        Block block = blockState.getBlock();
+        stack.getOrCreateNbt().putString(NBT_KEY, Registries.BLOCK.getId(block).toString());
+        return stack;
+    }
+
+    public static boolean hasWrappedBlock(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() == Miniblocks.MINIBLOCK_ITEM && stack.getNbt() != null && stack.getNbt().contains(NBT_KEY);
+    }
+
+    public static BlockState getWrappedBlockState(ItemStack stack) {
+        if (!hasWrappedBlock(stack)) {
+            return Blocks.STONE.getDefaultState();
+        }
+
+        String idString = stack.getNbt().getString(NBT_KEY);
+        if (idString.isEmpty()) {
+            return Blocks.STONE.getDefaultState();
+        }
+
+        Identifier id = Identifier.tryParse(idString);
+        if (id == null) {
+            return Blocks.STONE.getDefaultState();
+        }
+
+        Block block = Registries.BLOCK.get(id);
+        return block != null ? block.getDefaultState() : Blocks.STONE.getDefaultState();
+    }
+
+    private BlockState getHeldBlockState(ItemStack stack, ItemUsageContext context) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) {
+            return null;
+        }
+
+        Block block = blockItem.getBlock();
+        if (block == Miniblocks.MINIBLOCK) {
+            return null;
+        }
+
+        BlockState placementState = block.getPlacementState(new ItemPlacementContext(context));
+        return placementState != null ? placementState : block.getDefaultState();
     }
 
     @Override
@@ -28,7 +78,6 @@ public class MiniblockItem extends BlockItem {
         BlockState state = world.getBlockState(pos);
         Direction side = context.getSide();
 
-        // Case 1: Direct interaction with an existing sub-block inside a miniblock container
         if (state.isOf(Miniblocks.MINIBLOCK)) {
             BlockEntity blockEntity = world.getBlockEntity(pos);
             if (blockEntity instanceof MiniblockEntity miniblockEntity) {
@@ -51,11 +100,18 @@ public class MiniblockItem extends BlockItem {
 
                 int index = miniblockEntity.getIndex(x, y, z);
 
-                // Populate empty slot if targeted directly
-                if (miniblockEntity.subBlocks[index] == 0) {
+                if (miniblockEntity.isSlotEmpty(index)) {
+                    BlockState subBlockState = getHeldBlockState(stack, context);
+                    if (subBlockState == null && hasWrappedBlock(stack)) {
+                        subBlockState = getWrappedBlockState(stack);
+                    }
+                    if (subBlockState == null) {
+                        return ActionResult.PASS;
+                    }
+
                     if (world.isClient()) return ActionResult.SUCCESS;
 
-                    miniblockEntity.subBlocks[index] = 1;
+                    miniblockEntity.setSubBlock(index, subBlockState);
                     miniblockEntity.markDirtyAndSync();
 
                     if (player == null || !player.getAbilities().creativeMode) {
@@ -66,14 +122,12 @@ public class MiniblockItem extends BlockItem {
             }
         }
 
-        // Case 2: Placing onto a standard block face OR overflowing to the adjacent space
         BlockPos targetPos = pos.offset(side);
         BlockState targetState = world.getBlockState(targetPos);
 
         if (targetState.isAir() || targetState.isReplaceable() || targetState.isOf(Miniblocks.MINIBLOCK)) {
             if (world.isClient()) return ActionResult.SUCCESS;
 
-            // Ensure miniblock container exists at target position
             if (!targetState.isOf(Miniblocks.MINIBLOCK)) {
                 net.minecraft.sound.BlockSoundGroup soundGroup = this.getBlock().getSoundGroup(this.getBlock().getDefaultState());
                 world.playSound(null, targetPos, soundGroup.getPlaceSound(), net.minecraft.sound.SoundCategory.BLOCKS, 1.0F, 0.5F);
@@ -86,7 +140,6 @@ public class MiniblockItem extends BlockItem {
             if (blockEntity instanceof MiniblockEntity miniblockEntity) {
                 Vec3d hitPos = context.getHitPos();
 
-                // Calculate sub-quadrant relative to clicked block surface
                 double relX = hitPos.x - pos.getX();
                 double relY = hitPos.y - pos.getY();
                 double relZ = hitPos.z - pos.getZ();
@@ -95,7 +148,6 @@ public class MiniblockItem extends BlockItem {
                 int y = Math.max(0, Math.min(1, (int) Math.floor(relY * 2)));
                 int z = Math.max(0, Math.min(1, (int) Math.floor(relZ * 2)));
 
-                // Lock only the axis corresponding to the clicked face, preserving cursor positioning on the other two axes
                 if (side == Direction.UP) y = 0;
                 else if (side == Direction.DOWN) y = 1;
                 else if (side == Direction.NORTH) z = 1;
@@ -105,8 +157,16 @@ public class MiniblockItem extends BlockItem {
 
                 int index = miniblockEntity.getIndex(x, y, z);
 
-                if (miniblockEntity.subBlocks[index] == 0) {
-                    miniblockEntity.subBlocks[index] = 1;
+                if (miniblockEntity.isSlotEmpty(index)) {
+                    BlockState subBlockState = getHeldBlockState(stack, context);
+                    if (subBlockState == null && hasWrappedBlock(stack)) {
+                        subBlockState = getWrappedBlockState(stack);
+                    }
+                    if (subBlockState == null) {
+                        return ActionResult.PASS;
+                    }
+
+                    miniblockEntity.setSubBlock(index, subBlockState);
                     miniblockEntity.markDirtyAndSync();
 
                     if (player == null || !player.getAbilities().creativeMode) {

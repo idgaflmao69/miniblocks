@@ -2,6 +2,7 @@ package name.miniblocks;
 
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -16,16 +17,46 @@ import net.minecraft.util.math.BlockPos;
 
 public class MiniblockEntity extends BlockEntity {
 
-    // Start completely empty (0 = empty, 1 = filled)
-    public final byte[] subBlocks = new byte[8];
+    public static final int EMPTY_SLOT = -1;
     public static final Identifier SYNC_PACKET_ID = new Identifier("miniblocks", "sync_miniblock");
+    public final int[] subBlocks = new int[8];
 
     public MiniblockEntity(BlockPos pos, BlockState state) {
         super(Miniblocks.MINIBLOCK_ENTITY, pos, state);
+        for (int i = 0; i < subBlocks.length; i++) {
+            subBlocks[i] = EMPTY_SLOT;
+        }
     }
 
     public int getIndex(int x, int y, int z) {
         return x + (y * 2) + (z * 4);
+    }
+
+    public boolean isSlotEmpty(int index) {
+        return index < 0 || index >= subBlocks.length || subBlocks[index] == EMPTY_SLOT;
+    }
+
+    public void setSubBlock(int index, BlockState state) {
+        if (index < 0 || index >= subBlocks.length) {
+            return;
+        }
+        subBlocks[index] = state == null ? EMPTY_SLOT : Block.getRawIdFromState(state);
+    }
+
+    public BlockState getSubBlock(int index) {
+        if (isSlotEmpty(index)) {
+            return null;
+        }
+        return Block.getStateFromRawId(subBlocks[index]);
+    }
+
+    public boolean hasContent() {
+        for (int stateId : subBlocks) {
+            if (stateId != EMPTY_SLOT) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void markDirtyAndSync() {
@@ -33,8 +64,8 @@ public class MiniblockEntity extends BlockEntity {
         if (world != null && !world.isClient()) {
             PacketByteBuf buf = PacketByteBufs.create();
             buf.writeBlockPos(pos);
-            for (int i = 0; i < 8; i++) {
-                buf.writeByte(subBlocks[i]);
+            for (int i = 0; i < subBlocks.length; i++) {
+                buf.writeVarInt(subBlocks[i]);
             }
             for (ServerPlayerEntity player : ((ServerWorld) world).getPlayers()) {
                 if (player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < 64 * 64) {
@@ -47,15 +78,21 @@ public class MiniblockEntity extends BlockEntity {
     @Override
     public void writeNbt(NbtCompound nbt) {
         super.writeNbt(nbt);
-        nbt.putByteArray("SubBlocks", subBlocks);
+        nbt.putIntArray("SubBlocks", subBlocks);
     }
 
     @Override
     public void readNbt(NbtCompound nbt) {
         super.readNbt(nbt);
         if (nbt.contains("SubBlocks")) {
-            byte[] loaded = nbt.getByteArray("SubBlocks");
-            System.arraycopy(loaded, 0, subBlocks, 0, Math.min(loaded.length, subBlocks.length));
+            int[] loaded = nbt.getIntArray("SubBlocks");
+            for (int i = 0; i < subBlocks.length; i++) {
+                subBlocks[i] = i < loaded.length ? loaded[i] : EMPTY_SLOT;
+            }
+        } else {
+            for (int i = 0; i < subBlocks.length; i++) {
+                subBlocks[i] = EMPTY_SLOT;
+            }
         }
     }
 
@@ -67,7 +104,7 @@ public class MiniblockEntity extends BlockEntity {
     @Override
     public NbtCompound toInitialChunkDataNbt() {
         NbtCompound nbt = new NbtCompound();
-        nbt.putByteArray("SubBlocks", subBlocks);
+        nbt.putIntArray("SubBlocks", subBlocks);
         return nbt;
     }
 }

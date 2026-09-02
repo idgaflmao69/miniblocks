@@ -1,5 +1,6 @@
 package name.miniblocks;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
@@ -12,32 +13,24 @@ public class MiniblockEntityRenderer implements BlockEntityRenderer<MiniblockEnt
 
     @Override
     public void render(MiniblockEntity entity, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, int overlay) {
-        boolean hasContent = false;
-        for (byte b : entity.subBlocks) {
-            if (b != 0) {
-                hasContent = true;
-                break;
-            }
-        }
-        if (!hasContent) {
+        if (!entity.hasContent()) {
             return;
         }
 
         for (int x = 0; x < 2; x++) {
             for (int y = 0; y < 2; y++) {
                 for (int z = 0; z < 2; z++) {
-                    byte subBlockId = entity.subBlocks[entity.getIndex(x, y, z)];
-                    if (subBlockId != 0) {
-                        matrices.push();
-                        matrices.translate(x * 0.5D, y * 0.5D, z * 0.5D);
-                        matrices.scale(0.5F, 0.5F, 0.5F);
-
-                                MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(
-                                Miniblocks.URANIUM_ORE.getDefaultState(), matrices, vertexConsumers, light, overlay
-                        );
-
-                        matrices.pop();
+                    BlockState subBlockState = entity.getSubBlock(entity.getIndex(x, y, z));
+                    if (subBlockState == null) {
+                        continue;
                     }
+
+                    matrices.push();
+                    matrices.translate(x * 0.5D, y * 0.5D, z * 0.5D);
+                    matrices.scale(0.5F, 0.5F, 0.5F);
+
+                    MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(subBlockState, matrices, vertexConsumers, light, overlay);
+                    matrices.pop();
                 }
             }
         }

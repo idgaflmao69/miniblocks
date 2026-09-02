@@ -37,16 +37,19 @@ public class MiniblockBlock extends Block implements BlockEntityProvider {
             for (int x = 0; x < 2; x++) {
                 for (int y = 0; y < 2; y++) {
                     for (int z = 0; z < 2; z++) {
-                        if (miniblockEntity.subBlocks[miniblockEntity.getIndex(x, y, z)] != 0) {
+                        if (!miniblockEntity.isSlotEmpty(miniblockEntity.getIndex(x, y, z))) {
                             VoxelShape miniCube = Block.createCuboidShape(x * 8, y * 8, z * 8, (x + 1) * 8, (y + 1) * 8, (z + 1) * 8);
                             shape = VoxelShapes.union(shape, miniCube);
                         }
                     }
                 }
             }
+            if (shape == VoxelShapes.empty()) {
+                return VoxelShapes.fullCube();
+            }
             return shape;
         }
-        return VoxelShapes.empty();
+        return VoxelShapes.fullCube();
     }
 
     @Override
@@ -65,8 +68,8 @@ public class MiniblockBlock extends Block implements BlockEntityProvider {
             BlockEntity blockEntity = world.getBlockEntity(pos);
             if (blockEntity instanceof MiniblockEntity miniblockEntity) {
                 int count = 0;
-                for (int sub : miniblockEntity.subBlocks) {
-                    if (sub != 0) {
+                for (int i = 0; i < miniblockEntity.subBlocks.length; i++) {
+                    if (!miniblockEntity.isSlotEmpty(i)) {
                         count++;
                     }
                 }

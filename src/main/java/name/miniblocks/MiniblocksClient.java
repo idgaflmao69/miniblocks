@@ -1,20 +1,19 @@
 package name.miniblocks;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
 
 public class MiniblocksClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BlockEntityRendererRegistry.register(Miniblocks.MINIBLOCK_ENTITY, MiniblockEntityRenderer::new);
 
-        // Receive the sync packet on the client
         ClientPlayNetworking.registerGlobalReceiver(MiniblockEntity.SYNC_PACKET_ID, (client, handler, buf, responseSender) -> {
             net.minecraft.util.math.BlockPos pos = buf.readBlockPos();
-            byte[] updatedData = new byte[8];
+            int[] updatedData = new int[8];
             for (int i = 0; i < 8; i++) {
-                updatedData[i] = buf.readByte();
+                updatedData[i] = buf.readVarInt();
             }
 
             client.execute(() -> {

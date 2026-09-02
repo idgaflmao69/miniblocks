@@ -15,21 +15,20 @@ import net.minecraft.util.Identifier;
 public class Miniblocks implements ModInitializer {
 	public static final String MOD_ID = "miniblocks";
 
-	// 1. Define the Block
 	public static final Block MINIBLOCK = new MiniblockBlock(FabricBlockSettings.create().mapColor(MapColor.STONE_GRAY).nonOpaque());
 	public static final Block URANIUM_ORE = new Block(FabricBlockSettings.create().strength(3.0F));
+	public static final MiniblockItem MINIBLOCK_ITEM = new MiniblockItem(MINIBLOCK, new FabricItemSettings());
 
-	// 2. Define the Block Entity Type
 	public static BlockEntityType<MiniblockEntity> MINIBLOCK_ENTITY;
 
 	@Override
 	public void onInitialize() {
-		// Register Block
 		Registry.register(Registries.BLOCK, new Identifier(MOD_ID, "miniblock"), MINIBLOCK);
 		Registry.register(Registries.BLOCK, new Identifier(MOD_ID, "uranium_ore"), URANIUM_ORE);
-		Registry.register(Registries.ITEM, new Identifier(MOD_ID, "miniblock"), new MiniblockItem(MINIBLOCK, new FabricItemSettings()));
+		Registry.register(Registries.ITEM, new Identifier(MOD_ID, "miniblock"), MINIBLOCK_ITEM);
+		Registry.register(Registries.RECIPE_SERIALIZER, new Identifier(MOD_ID, "block_to_miniblocks"), MiniblockConversionRecipe.BLOCK_TO_MINIBLOCKS);
+		Registry.register(Registries.RECIPE_SERIALIZER, new Identifier(MOD_ID, "miniblocks_to_block"), MiniblockConversionRecipe.MINIBLOCKS_TO_BLOCK);
 
-		// Register Block Entity
 		MINIBLOCK_ENTITY = Registry.register(
 				Registries.BLOCK_ENTITY_TYPE,
 				new Identifier(MOD_ID, "miniblock_entity"),

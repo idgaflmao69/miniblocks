@@ -83,30 +83,66 @@ final class MiniblockRenderUtil {
             int[] vertexData = quad.getVertexData().clone();
             Sprite sprite = quad.getSprite();
             Direction face = quad.getFace();
-            float uOffset = getUOffset(face);
-            float vOffset = getVOffset(face);
             float uRange = sprite.getMaxU() - sprite.getMinU();
             float vRange = sprite.getMaxV() - sprite.getMinV();
+            float[] p = new float[4];
+            float[] q = new float[4];
+            float[] u = new float[4];
+            float[] v = new float[4];
 
             for (int vertex = 0; vertex < 4; vertex++) {
-                // Baked quads use POSITION_COLOR_TEXTURE_LIGHT_NORMAL (8 ints per vertex).
+                int positionIndex = vertex * 8;
                 int uvIndex = vertex * 8 + 4;
-                float u = Float.intBitsToFloat(vertexData[uvIndex]);
-                float v = Float.intBitsToFloat(vertexData[uvIndex + 1]);
-                float normalizedU = (u - sprite.getMinU()) / uRange;
-                float normalizedV = (v - sprite.getMinV()) / vRange;
-                vertexData[uvIndex] = Float.floatToRawIntBits(
-                        sprite.getMinU() + (uOffset + normalizedU * 0.5F) * uRange
-                );
-                vertexData[uvIndex + 1] = Float.floatToRawIntBits(
-                        sprite.getMinV() + (vOffset + normalizedV * 0.5F) * vRange
-                );
+                float px = Float.intBitsToFloat(vertexData[positionIndex]);
+                float py = Float.intBitsToFloat(vertexData[positionIndex + 1]);
+                float pz = Float.intBitsToFloat(vertexData[positionIndex + 2]);
+                p[vertex] = getP(face, px, py, pz);
+                q[vertex] = getQ(face, px, py, pz);
+                u[vertex] = (Float.intBitsToFloat(vertexData[uvIndex]) - sprite.getMinU()) / uRange;
+                v[vertex] = (Float.intBitsToFloat(vertexData[uvIndex + 1]) - sprite.getMinV()) / vRange;
+            }
+
+            TextureAxis uAxis = findTextureAxis(p, q, u);
+            TextureAxis vAxis = findTextureAxis(p, q, v);
+            if (uAxis == null || vAxis == null) {
+                return quad;
+            }
+
+            float pOffset = getPOffset(face);
+            float qOffset = getQOffset(face);
+            for (int vertex = 0; vertex < 4; vertex++) {
+                int uvIndex = vertex * 8 + 4;
+                float uOffset = uAxis.pAxis ? pOffset : qOffset;
+                float vOffset = vAxis.pAxis ? pOffset : qOffset;
+                if (!uAxis.positive) uOffset = 1.0F - uOffset - 0.5F;
+                if (!vAxis.positive) vOffset = 1.0F - vOffset - 0.5F;
+                float adjustedU = uOffset + u[vertex] * 0.5F;
+                float adjustedV = vOffset + v[vertex] * 0.5F;
+                vertexData[uvIndex] = Float.floatToRawIntBits(sprite.getMinU() + adjustedU * uRange);
+                vertexData[uvIndex + 1] = Float.floatToRawIntBits(sprite.getMinV() + adjustedV * vRange);
             }
 
             return new BakedQuad(vertexData, quad.getColorIndex(), face, sprite, quad.hasShade());
         }
 
-        private float getUOffset(Direction face) {
+        private float getP(Direction face, float px, float py, float pz) {
+            return switch (face) {
+                case NORTH -> 1.0F - px;
+                case EAST -> 1.0F - pz;
+                case SOUTH, UP, DOWN -> px;
+                case WEST -> pz;
+            };
+        }
+
+        private float getQ(Direction face, float px, float py, float pz) {
+            return switch (face) {
+                case UP -> pz;
+                case DOWN -> 1.0F - pz;
+                case NORTH, SOUTH, WEST, EAST -> 1.0F - py;
+            };
+        }
+
+        private float getPOffset(Direction face) {
             return switch (face) {
                 case NORTH -> (1 - x) * 0.5F;
                 case EAST -> (1 - z) * 0.5F;
@@ -115,13 +151,42 @@ final class MiniblockRenderUtil {
             };
         }
 
-        private float getVOffset(Direction face) {
+        private float getQOffset(Direction face) {
             return switch (face) {
                 case UP -> z * 0.5F;
                 case DOWN -> (1 - z) * 0.5F;
                 case NORTH, SOUTH, WEST, EAST -> (1 - y) * 0.5F;
             };
         }
+
+        private TextureAxis findTextureAxis(float[] p, float[] q, float[] texture) {
+            float pCorrelation = correlation(p, texture);
+            float qCorrelation = correlation(q, texture);
+            if (Math.abs(pCorrelation) < 0.001F && Math.abs(qCorrelation) < 0.001F) {
+                return null;
+            }
+            return Math.abs(pCorrelation) >= Math.abs(qCorrelation)
+                    ? new TextureAxis(true, pCorrelation >= 0.0F)
+                    : new TextureAxis(false, qCorrelation >= 0.0F);
+        }
+
+        private float correlation(float[] first, float[] second) {
+            float firstAverage = average(first);
+            float secondAverage = average(second);
+            float result = 0.0F;
+            for (int i = 0; i < first.length; i++) {
+                result += (first[i] - firstAverage) * (second[i] - secondAverage);
+            }
+            return result;
+        }
+
+        private float average(float[] values) {
+            float result = 0.0F;
+            for (float value : values) result += value;
+            return result / values.length;
+        }
+
+        private record TextureAxis(boolean pAxis, boolean positive) {}
 
         @Override
         public boolean useAmbientOcclusion() {
